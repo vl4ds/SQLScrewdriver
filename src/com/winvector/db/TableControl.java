@@ -20,37 +20,39 @@ import com.winvector.util.BurstMap;
 import com.winvector.util.RowCritique;
 
 public final class TableControl {
-	private static final String colQuote = "\"";
 	private static final String rowNumCol = "ORIGFILEROWNUMBER";
 	private static final String fileNameCol = "ORIGFILENAME";
 	private static final String insertTimeCol = "ORIGINSERTTIME";
 	private static final String randCol = "ORIGRANDGROUP";
 	private static Set<String> predefKeys = new LinkedHashSet<String>(Arrays.asList(new String[] {
-			rowNumCol, fileNameCol, insertTimeCol, randCol
-		}));
+        rowNumCol, fileNameCol, insertTimeCol, randCol
+    }));
 	private static final int fNameColNum = 1;
-
+    
 	private final String tableName;
 	private final ArrayList<String> keys = new ArrayList<String>();
 	private boolean[] isInt = null;
 	private boolean[] isNumeric = null;
 	private int[] sizes = null;
-
+    
 	private String createStatement = null;
 	private String insertStatement = null;
 	private String selectStatement = null;
 	
 	private int[] columnTypeCode = null;
 	private String[] columnClassName = null;
-
+    
 	private final String SQLDOUBLETYPE;
 	private final String SQLINTTYPE;
 	private final String SQLTIMETYPE;
+	private final String COLQUOTE;
+    
 	
 	public TableControl(final Properties props, final String tableName) {
 		SQLDOUBLETYPE = props.getProperty("SQLDOUBLE", "DOUBLE PRECISION");
 		SQLINTTYPE = props.getProperty("SQLINT", "BIGINT"); // Oracle uses NUMBER
 		SQLTIMETYPE = props.getProperty("SQLTIME", "TIMESTAMP");
+		COLQUOTE = props.getProperty("COLQUOTE", "\"");
 		this.tableName = tableName;
 	}
 	
@@ -78,7 +80,7 @@ public final class TableControl {
 		}
 		return false;
 	}
-
+    
 	public static boolean couldBeInt(final String v) {
 		if(null==v) {
 			return false;
@@ -117,7 +119,7 @@ public final class TableControl {
 	}
 	
 	public void scanForDefs(final String fileName,
-			final Iterable<BurstMap> source, final RowCritique gateKeeper) throws SQLException {
+                            final Iterable<BurstMap> source, final RowCritique gateKeeper) throws SQLException {
 		// scan once to get field names and sizes and types
 		final Ticker ticker = new Ticker();
 		for(final BurstMap row: source) {
@@ -184,7 +186,7 @@ public final class TableControl {
 		final int colonIndex = k.indexOf(':');
 		if(colonIndex>0) { 		// get rid of any trailing : type info
 			k = k.substring(0,colonIndex);
-		}		
+		}
 		k = stompMarks(k).replaceAll("\\W+"," ").trim().replaceAll("\\s+","_");
 		if((k.length()<=0)||invalidColumnNames.contains(k.toUpperCase())||(!Character.isLetter(k.charAt(0)))) {
 			k = columnPrefix + k;
@@ -225,23 +227,23 @@ public final class TableControl {
 				final String colName = plumpColumnName(k,seenColNames);
 				if(predefKeys.contains(k)) {
 					if(rowNumCol.equalsIgnoreCase(k)||randCol.equalsIgnoreCase(k)) {
-						createBuilder.append(" " + colQuote + colName  + colQuote + " " + SQLINTTYPE);
+						createBuilder.append(" " + COLQUOTE + colName  + COLQUOTE + " " + SQLINTTYPE);
 					} else if(fileNameCol.equalsIgnoreCase(k)) {
-						createBuilder.append(" " + colQuote + colName + colQuote + " VARCHAR(" + sizes[i] + ")");
+						createBuilder.append(" " + COLQUOTE + colName + COLQUOTE + " VARCHAR(" + sizes[i] + ")");
 					} else if(insertTimeCol.equalsIgnoreCase(k)) {
-						createBuilder.append(" " + colQuote + colName  + colQuote + " " + SQLTIMETYPE);
+						createBuilder.append(" " + COLQUOTE + colName  + COLQUOTE + " " + SQLTIMETYPE);
 					}
 				} else {
 					if(isInt[i]) {
-						createBuilder.append(" " + colQuote + colName  + colQuote + " " + SQLINTTYPE);
+						createBuilder.append(" " + COLQUOTE + colName  + COLQUOTE + " " + SQLINTTYPE);
 					} else if(isNumeric[i]) {
-						createBuilder.append(" " + colQuote + colName + colQuote + " " + SQLDOUBLETYPE);
+						createBuilder.append(" " + COLQUOTE + colName + COLQUOTE + " " + SQLDOUBLETYPE);
 					} else {
-						createBuilder.append(" " + colQuote + colName + colQuote + " VARCHAR(" + sizes[i] + ")");
+						createBuilder.append(" " + COLQUOTE + colName + COLQUOTE + " VARCHAR(" + sizes[i] + ")");
 					}
 				}
-				insertBuilder.append(" " + colQuote + colName + colQuote);
-				selectBuilder.append(" " + colQuote + colName + colQuote);
+				insertBuilder.append(" " + COLQUOTE + colName + COLQUOTE);
+				selectBuilder.append(" " + COLQUOTE + colName + COLQUOTE);
 				++i;
 			}
 		}
@@ -254,7 +256,7 @@ public final class TableControl {
 			}
 			insertBuilder.append(" ?");
 		}
-		insertBuilder.append(" )");			
+		insertBuilder.append(" )");
 		createStatement = createBuilder.toString();
 		insertStatement = insertBuilder.toString();
 		selectStatement = selectBuilder.toString();
@@ -285,12 +287,12 @@ public final class TableControl {
 			columnClassName[i] = rsm.getColumnClassName(i+1);
 		}
 		rs.close();
-		stmt.close();			
+		stmt.close();
 	}
 	
 	public long loadData(final String fileName, final Date insertTime, final Random rand,
-			final Iterable<BurstMap> source, final RowCritique gateKeeper,
-			final DBHandle handle) throws SQLException {
+                         final Iterable<BurstMap> source, final RowCritique gateKeeper,
+                         final DBHandle handle) throws SQLException {
 		// scan again and populate
 		System.out.println("\texecuting: " + insertStatement);
 		handle.conn.commit();
@@ -321,7 +323,7 @@ public final class TableControl {
 							} else {
 								stmtA.setLong(i+1,asLong);
 							}
-						} else if(isNumeric[i]) {	
+						} else if(isNumeric[i]) {
 							final double asDouble = row.getAsDouble(k);
 							if(Double.isNaN(asDouble)) {
 								stmtA.setNull(i+1,columnTypeCode[i]);
